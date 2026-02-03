@@ -1,0 +1,24 @@
+# dependencies
+node_modules
+.pnp
+.pnp.*
+
+# builds
+.next
+dist
+out
+.turbo
+
+# env
+.env
+.env.*.local
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# misc
+.DS_Store
+
