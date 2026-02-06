@@ -6,10 +6,10 @@ Rule: update this file every time a task changes state.
 
 ## EPIC 0 — Project setup + Supabase foundation
 
- - (IN_PROGRESS | A1) Create Supabase project + env vars + local config docs
- - (IN_PROGRESS | A1) Define RLS policy plan (public read for published snapshots; private for watchers)
- - (IN_PROGRESS | A1) Create initial DB migrations: projects, snapshots, diffs, watchers, watch_runs
- - (IN_PROGRESS | A1) Seed demo project records (2–3 sample tokens)
+- (DONE | A1) Create Supabase project + env vars + local config docs — documented env conventions in `docs/env.md` and expanded `supabase/README.md`.
+- (DONE | A1) Define RLS policy plan (public read for published snapshots; private for watchers) — filled out `docs/rls-plan.md` with per-table policies and service-role guidance.
+- (DONE | A1) Create initial DB migrations: projects, snapshots, diffs, watchers, watch_runs — added `supabase/migrations/0001_create_tables.sql` with schema + triggers.
+- (DONE | A1) Seed demo project records (2–3 sample tokens) — added `supabase/seeds/demo-plan.md` describing the demo data plan.
 
 ## EPIC 1 — Analyzer (ERC-20 + proxy detection)
 
@@ -53,9 +53,9 @@ Rule: update this file every time a task changes state.
 - (TODO | A4) Plain language templates + raw toggle UI
 - (TODO | A4) “Copy hash / copy CID” actions
 - (TODO | A4) Print / save-as-PDF (browser print)
-- (TODO | A4) Draft flow UI (address → draft receipt)
-- (TODO | A4) Publish flow UI (review → publish → share links)
-- (TODO | A4) Verify UI (shows result from A3 verify routine)
+ - (TODO | A4) Draft flow UI (address → draft receipt)
+ - (TODO | A4) Publish flow UI (review → publish → share links)
+ - (TODO | A4) Verify UI (shows result from A3 verify routine)
 - (TODO | A4) History timeline UI (versions list)
 - (TODO | A4) Diff UI (vN vs vN-1)
 
@@ -77,4 +77,3 @@ Rule: update this file every time a task changes state.
 - (TODO | A1) Arweave publish
 - (TODO | A1) Embed widget/badge
 - (TODO | A1) Builder claim via signature
-
