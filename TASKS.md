@@ -49,19 +49,19 @@ Rule: update this file every time a task changes state.
 
 ## EPIC 6 — Receipt-first UI (LaunchReceipt)
 
-- (TODO | A4) Receipt component (header, line items, footer, QR)
-- (TODO | A4) Plain language templates + raw toggle UI
-- (TODO | A4) “Copy hash / copy CID” actions
-- (TODO | A4) Print / save-as-PDF (browser print)
+- (DONE | A4) Receipt component (header, line items, footer, QR)
+- (DONE | A4) Plain language templates + raw toggle UI
+- (DONE | A4) “Copy hash / copy CID” actions
+- (DONE | A4) Print / save-as-PDF (browser print)
  - (TODO | A4) Draft flow UI (address → draft receipt)
  - (TODO | A4) Publish flow UI (review → publish → share links)
  - (TODO | A4) Verify UI (shows result from A3 verify routine)
-- (TODO | A4) History timeline UI (versions list)
-- (TODO | A4) Diff UI (vN vs vN-1)
+- (DONE | A4) History timeline UI (versions list)
+- (DONE | A4) Diff UI (vN vs vN-1)
 
 ## EPIC 7 — Prechecklist (one-stop shop)
 
-- (TODO | A4) Prechecklist UI section (present/missing; 3 optional builder fields)
+- (DONE | A4) Prechecklist UI section (present/missing; 3 optional builder fields)
 - (TODO | A2) Prechecklist data builder (auto-detected + builder input slots)
 
 ## EPIC 8 — QA + demo readiness
