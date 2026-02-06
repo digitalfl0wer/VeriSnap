@@ -19,6 +19,15 @@ export type ProxySlotResult = {
   admin: SnapshotField<Address | null>;
 };
 
+export type BaseScanConfig = {
+  apiKey?: string;
+  baseUrl?: string;
+};
+
+export type SourcifyConfig = {
+  serverUrl?: string;
+};
+
 export type ExplorerEvidence = {
   value: string;
   provenance: Provenance;

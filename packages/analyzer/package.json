@@ -10,7 +10,8 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@verisnap/core": "workspace:*"
+    "@verisnap/core": "workspace:*",
+    "ethers": "^6.9.0"
   }
 }
 
