@@ -10,6 +10,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@verisnap/core": "workspace:*",
+    "@verisnap/db": "workspace:*",
+    "@verisnap/worker": "workspace:*",
     "next": "14.2.5",
     "react": "18.3.1",
     "react-dom": "18.3.1"
@@ -26,4 +29,3 @@
     "typescript": "5.7.3"
   }
 }
-

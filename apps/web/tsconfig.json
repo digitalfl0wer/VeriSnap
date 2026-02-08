@@ -2,10 +2,55 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "incremental": true,
-    "plugins": [{ "name": "next" }],
-    "types": ["node"]
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "types": [
+      "node"
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "src/*"
+      ],
+      "@verisnap/core": [
+        "../../packages/core/src/index.ts"
+      ],
+      "@verisnap/core/*": [
+        "../../packages/core/src/*"
+      ],
+      "@verisnap/analyzer": [
+        "../../packages/analyzer/src/index.ts"
+      ],
+      "@verisnap/analyzer/*": [
+        "../../packages/analyzer/src/*"
+      ],
+      "@verisnap/db": [
+        "../../packages/db/src/index.ts"
+      ],
+      "@verisnap/db/*": [
+        "../../packages/db/src/*"
+      ],
+      "@verisnap/worker": [
+        "../../packages/worker/src/index.ts"
+      ],
+      "@verisnap/worker/*": [
+        "../../packages/worker/src/*"
+      ]
+    },
+    "noEmit": true,
+    "esModuleInterop": true,
+    "isolatedModules": true
   },
-  "include": ["next-env.d.ts", "src/**/*.ts", "src/**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "next-env.d.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }
-
