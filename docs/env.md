@@ -30,6 +30,12 @@ workers, cron) but must never be referenced in client bundles.
   publish flows use this when storing CIDs.
 - `BASE_RPC_URL` / `BASESCAN_API_KEY`: used by the analyzer worker in packages
   to query on-chain data and BaseScan metadata.
+- `BASE_CHAIN_ID`: optional; defaults to `8453` (Base mainnet) if not provided.
+- `CHAIN_ID`: optional alias for `BASE_CHAIN_ID` (preferred).
+- `BASE_SEPOLIA_RPC_URL`: optional; RPC endpoint for Base Sepolia (future use).
+- `BLOCKSCOUT_API_BASE`: optional; Base Blockscout API base (for future wallet history / tx lists).
+- `APP_BASE_URL`: optional; used to generate absolute links in emails (watch verify/unsubscribe and version permalinks).
+- `FROM_EMAIL`: optional; sender address for Resend emails.
 - `CRON_SECRET`: used by the polling cron endpoint to validate the incoming
   scheduled requests from your deployment platform.
 
