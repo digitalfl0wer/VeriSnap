@@ -1,8 +1,8 @@
-import { keccak256 } from "@noble/hashes/sha3";
+import { keccak_256 } from "@noble/hashes/sha3.js";
 
 const TEXT_ENCODER = new TextEncoder();
-const ADDRESS_KEYS = new Set(["contractAddress", "implementation", "admin"]);
-const TIMESTAMP_KEYS = new Set(["observedAt"]);
+const ADDRESS_KEYS = new Set(["contractAddress", "implementation", "admin", "from", "to"]);
+const TIMESTAMP_KEYS = new Set(["observedAt", "blockTimestamp"]);
 
 export type Address = `0x${string}`;
 
@@ -54,29 +54,23 @@ export type VerifySnapshotResult = {
   };
 };
 
-export function canonicalizeSnapshot(snapshot: LaunchSnapshot): string {
-  const canonical = canonicalizeValue(snapshot);
+export function canonicalizeJson(value: unknown): string {
+  const canonical = canonicalizeValue(value);
   return JSON.stringify(canonical);
 }
 
-export function hashSnapshot(snapshot: LaunchSnapshot): string {
-  const canonicalJson = canonicalizeSnapshot(snapshot);
-  const digest = keccak256(TEXT_ENCODER.encode(canonicalJson));
+export function hashCanonicalJson(value: unknown): string {
+  const canonicalJson = canonicalizeJson(value);
+  const digest = keccak_256(TEXT_ENCODER.encode(canonicalJson));
   return `0x${bytesToHex(digest)}`;
 }
 
-export function verifySnapshot(
-  snapshotJson: string | LaunchSnapshot,
-  storedHash: string,
-): VerifySnapshotResult {
+export function verifyCanonicalJson(value: unknown | string, storedHash: string): VerifySnapshotResult {
   const normalizedStoredHash = normalizeHashString(storedHash);
 
   try {
-    const snapshot =
-      typeof snapshotJson === "string"
-        ? (JSON.parse(snapshotJson) as LaunchSnapshot)
-        : snapshotJson;
-    const computedHash = hashSnapshot(snapshot);
+    const parsed = typeof value === "string" ? (JSON.parse(value) as unknown) : value;
+    const computedHash = hashCanonicalJson(parsed);
     const status = computedHash === normalizedStoredHash ? "valid" : "invalid";
 
     return {
@@ -84,24 +78,32 @@ export function verifySnapshot(
       evidence: {
         storedHash: normalizedStoredHash,
         computedHash,
-        canonicalJson: canonicalizeSnapshot(snapshot),
-        message:
-          status === "valid"
-            ? "hash match"
-            : "recomputed hash differs from stored hash",
+        canonicalJson: canonicalizeJson(parsed),
+        message: status === "valid" ? "hash match" : "recomputed hash differs from stored hash",
       },
     };
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "failed to parse snapshot";
+    const message = error instanceof Error ? error.message : "failed to parse json";
     return {
       status: "error",
-      evidence: {
-        storedHash: normalizedStoredHash,
-        message,
-      },
+      evidence: { storedHash: normalizedStoredHash, message },
     };
   }
+}
+
+export function canonicalizeSnapshot(snapshot: LaunchSnapshot): string {
+  return canonicalizeJson(snapshot);
+}
+
+export function hashSnapshot(snapshot: LaunchSnapshot): string {
+  return hashCanonicalJson(snapshot);
+}
+
+export function verifySnapshot(
+  snapshotJson: string | LaunchSnapshot,
+  storedHash: string,
+): VerifySnapshotResult {
+  return verifyCanonicalJson(snapshotJson, storedHash);
 }
 
 function canonicalizeValue(value: unknown, path: string[] = []): unknown {
