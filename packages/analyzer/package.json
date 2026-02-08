@@ -11,7 +11,6 @@
   },
   "dependencies": {
     "@verisnap/core": "workspace:*",
-    "ethers": "^6.9.0"
+    "@noble/hashes": "^2.0.1"
   }
 }
-

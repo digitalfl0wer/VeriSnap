@@ -1,14 +1,21 @@
-import type { Address, SnapshotField, TruthStatus } from "@verisnap/core";
+import type { Address, SnapshotField } from "@verisnap/core";
 import type { AnalyzerRpcConfig, ERC20FieldKeys, ERC20FieldSet, ProxySlotResult } from "./types";
+import {
+  decodeAbiString,
+  decodeAbiUint256ToDecimalString,
+  decodeAbiUint8,
+  encodeSelector,
+  normalizeAddressFromStorageSlot,
+} from "./abi";
 
-const toSnapshotField =
-  <T>(provenance: SnapshotField<T>["provenance"]) =>
-  (value: T, status: TruthStatus): SnapshotField<T> =>
-    ({
-      value,
-      status,
-      provenance,
-    } as SnapshotField<T>);
+function toSnapshotField<T>(
+  provenance: SnapshotField<T>["provenance"],
+  value: T,
+  status: SnapshotField<T>["status"],
+  evidence?: SnapshotField<T>["evidence"]
+): SnapshotField<T> {
+  return { value, status, provenance, evidence };
+}
 
 export async function checkContractExists(
   { rpcUrl }: AnalyzerRpcConfig,
@@ -35,29 +42,31 @@ export async function checkContractExists(
 
   const exists = !!data.result && data.result !== "0x";
 
-  return toSnapshotField("chain")(exists, exists ? "yes" : "no");
+  return toSnapshotField("chain", exists, exists ? "yes" : "no", { result: data.result });
 }
 
-const erc20FieldDefaults: Record<ERC20FieldKeys, SnapshotField<string>["status"]> = {
+const erc20FieldDefaults: Record<ERC20FieldKeys, SnapshotField<unknown>["status"]> = {
   name: "unknown",
   symbol: "unknown",
   decimals: "unknown",
   totalSupply: "unknown",
 };
 
-const erc20MethodMap: Record<ERC20FieldKeys, string> = {
-  name: "name()",
-  symbol: "symbol()",
-  decimals: "decimals()",
-  totalSupply: "totalSupply()",
+const erc20MethodMap: Record<ERC20FieldKeys, { signature: string; decode: (hex: string) => unknown }> = {
+  name: { signature: "name()", decode: decodeAbiString },
+  symbol: { signature: "symbol()", decode: decodeAbiString },
+  decimals: { signature: "decimals()", decode: decodeAbiUint8 },
+  totalSupply: { signature: "totalSupply()", decode: decodeAbiUint256ToDecimalString },
 };
 
 async function callERC20Field(
   config: AnalyzerRpcConfig,
   target: Address,
   key: ERC20FieldKeys
-): Promise<SnapshotField<string> | undefined> {
+): Promise<SnapshotField<unknown> | undefined> {
   const { rpcUrl } = config;
+  const { signature, decode } = erc20MethodMap[key];
+  const selector = encodeSelector(signature);
 
   const payload = {
     jsonrpc: "2.0",
@@ -65,7 +74,7 @@ async function callERC20Field(
     params: [
       {
         to: target,
-        data: `${encodeMethodCall(erc20MethodMap[key])}`,
+        data: selector,
       },
       "latest",
     ],
@@ -87,20 +96,18 @@ async function callERC20Field(
     return undefined;
   }
 
+  const decoded = decode(json.result);
+  if (decoded === undefined || decoded === null) return undefined;
+
   return {
-    value: decodeMethodResult(json.result),
+    value: decoded,
     status: "yes",
     provenance: "chain",
+    evidence: {
+      signature,
+      result: json.result,
+    },
   };
-}
-
-function encodeMethodCall(signature: string): string {
-  const hash = crypto.subtle.keccak256(new TextEncoder().encode(signature));
-  throw new Error("Not implemented");
-}
-
-function decodeMethodResult(_data: string): string {
-  throw new Error("Not implemented");
 }
 
 export async function readERC20Fields(
@@ -112,13 +119,21 @@ export async function readERC20Fields(
   for (const key of Object.keys(erc20MethodMap) as ERC20FieldKeys[]) {
     const field = await callERC20Field(config, target, key);
     if (field) {
-      results[key] = field;
+      if (key === "decimals" && typeof field.value === "number") {
+        results.decimals = field as SnapshotField<number>;
+      } else if (key === "name" && typeof field.value === "string") {
+        results.name = field as SnapshotField<string>;
+      } else if (key === "symbol" && typeof field.value === "string") {
+        results.symbol = field as SnapshotField<string>;
+      } else if (key === "totalSupply" && typeof field.value === "string") {
+        results.totalSupply = field as SnapshotField<string>;
+      }
     } else {
-      results[key] = {
-        value: "",
-        status: erc20FieldDefaults[key],
-        provenance: "chain",
-      };
+      if (key === "decimals") {
+        results.decimals = toSnapshotField("chain", 0, erc20FieldDefaults[key]);
+      } else {
+        results[key] = toSnapshotField("chain", "", erc20FieldDefaults[key]) as SnapshotField<string>;
+      }
     }
   }
 
@@ -164,11 +179,12 @@ export async function detectProxySlots(
   const adminRaw = await readStorageSlot(config, target, proxyStorageSlots.admin);
 
   const toField = (raw: string | undefined): SnapshotField<Address | null> => {
-    const cleaned = raw && raw !== "0x" ? (`0x${raw.slice(2).padStart(40, "0")}` as Address) : null;
+    const cleaned = raw ? (normalizeAddressFromStorageSlot(raw) as Address | null) : null;
     return {
       value: cleaned,
       status: cleaned ? "yes" : "no",
       provenance: "chain",
+      evidence: raw ? { raw } : undefined,
     };
   };
 
