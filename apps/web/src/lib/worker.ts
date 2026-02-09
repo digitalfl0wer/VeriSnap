@@ -1,3 +1,5 @@
+import "server-only";
+
 import { createWorker, type WorkerEnv } from "@verisnap/worker";
 
 function required(name: string): string {
