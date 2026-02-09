@@ -36,6 +36,8 @@ workers, cron) but must never be referenced in client bundles.
 - `BLOCKSCOUT_API_BASE`: optional; Base Blockscout API base (for future wallet history / tx lists).
 - `APP_BASE_URL`: optional; used to generate absolute links in emails (watch verify/unsubscribe and version permalinks).
 - `FROM_EMAIL`: optional; sender address for Resend emails.
+- `ADMIN_API_KEY`: server-only; protects privileged endpoints (cron polling, check-now, admin overrides).
+- `CLAIM_SECRET`: server-only; HMAC secret used to mint short-lived claim tokens for wallet-signature publishing.
 - `CRON_SECRET`: used by the polling cron endpoint to validate the incoming
   scheduled requests from your deployment platform.
 
