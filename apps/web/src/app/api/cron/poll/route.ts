@@ -3,7 +3,10 @@ export function GET(request: Request) {
   const provided = request.headers.get("x-cron-secret") ?? url.searchParams.get("secret");
   const expected = process.env.CRON_SECRET;
 
-  if (!expected || provided !== expected) {
+  const adminKey = request.headers.get("x-admin-key")?.trim();
+  const isAdmin = Boolean(process.env.ADMIN_API_KEY && adminKey && adminKey === process.env.ADMIN_API_KEY);
+
+  if (!isAdmin && (!expected || provided !== expected)) {
     return new Response("Unauthorized", { status: 401 });
   }
 

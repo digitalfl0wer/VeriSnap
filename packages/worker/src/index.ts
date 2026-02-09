@@ -689,3 +689,4 @@ function escapeHtml(value: string): string {
 }
 
 export * from "./receipt";
+export * from "./signature";

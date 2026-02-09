@@ -1,5 +1,6 @@
 import { type Address } from "@verisnap/core";
 import { getWorker } from "@/lib/worker";
+import { rateLimitOrThrow } from "@/lib/rateLimit";
 
 type DraftRequest = {
   contractAddress: Address;
@@ -15,6 +16,7 @@ export async function POST(request: Request) {
   }
 
   try {
+    rateLimitOrThrow({ request, key: "draft_ip", windowMs: 60_000, max: 20 });
     const worker = getWorker();
     const result = await worker.generateDraft(body);
     return Response.json({ ok: true, result });
@@ -23,4 +25,3 @@ export async function POST(request: Request) {
     return Response.json({ ok: false, error: message }, { status: 500 });
   }
 }
-

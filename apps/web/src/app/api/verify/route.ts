@@ -1,4 +1,5 @@
 import { getWorker } from "@/lib/worker";
+import { rateLimitOrThrow } from "@/lib/rateLimit";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -11,6 +12,7 @@ export async function GET(request: Request) {
   }
 
   try {
+    rateLimitOrThrow({ request, key: "verify_ip", windowMs: 60_000, max: 120 });
     const worker = getWorker();
     const result = await worker.verifyPublishedSnapshot({ slug, version });
     return Response.json({ ok: true, result });
@@ -19,4 +21,3 @@ export async function GET(request: Request) {
     return Response.json({ ok: false, error: message }, { status: 500 });
   }
 }
-

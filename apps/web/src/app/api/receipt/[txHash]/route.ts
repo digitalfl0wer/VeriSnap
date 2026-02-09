@@ -1,4 +1,5 @@
 import { snapshotTxReceipt } from "@verisnap/worker";
+import { rateLimitOrThrow } from "@/lib/rateLimit";
 
 function required(name: string): string {
   const value = process.env[name];
@@ -13,6 +14,7 @@ export async function GET(_request: Request, { params }: { params: { txHash: str
   }
 
   try {
+    rateLimitOrThrow({ request: _request, key: "receipt_ip", windowMs: 60_000, max: 60 });
     const chainId = Number(process.env.CHAIN_ID ?? process.env.BASE_CHAIN_ID ?? "8453");
     const rpcUrl = required("BASE_RPC_URL");
 
@@ -23,4 +25,3 @@ export async function GET(_request: Request, { params }: { params: { txHash: str
     return Response.json({ ok: false, error: message }, { status: 500 });
   }
 }
-
