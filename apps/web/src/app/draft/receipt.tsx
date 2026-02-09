@@ -16,6 +16,8 @@ export default function DraftReceipt({ address }: { address: string }) {
   const [publishResult, setPublishResult] = useState<any | null>(null);
   const [email, setEmail] = useState("");
   const [watchStatus, setWatchStatus] = useState<string | null>(null);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [walletStatus, setWalletStatus] = useState<string | null>(null);
   const [builderLinks, setBuilderLinks] = useState<Array<{ label: string; url: string }>>(DEFAULT_BUILDER_LINKS);
 
   const contractAddress = useMemo(() => (address.trim() as Address), [address]);
@@ -62,10 +64,38 @@ export default function DraftReceipt({ address }: { address: string }) {
     setError(null);
 
     try {
+      const signer = await ensureWallet();
+      if (!signer) {
+        throw new Error("Wallet connection is required to publish");
+      }
+
+      const claimStart = await fetch("/api/claim/start", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          tokenAddress: contractAddress,
+          slug: data.project.slug,
+          version: data.snapshot.version,
+        }),
+      });
+      const claimJson = (await claimStart.json()) as any;
+      if (!claimJson.ok) throw new Error(claimJson.error ?? "Failed to start claim");
+
+      const message: string = claimJson.message;
+      const token: string = claimJson.token;
+
+      const signature = await personalSign(message, signer);
+
       const response = await fetch("/api/publish", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ slug: data.project.slug, version: data.snapshot.version }),
+        body: JSON.stringify({
+          slug: data.project.slug,
+          version: data.snapshot.version,
+          token,
+          message,
+          signature,
+        }),
       });
       const json = (await response.json()) as any;
       if (!json.ok) throw new Error(json.error ?? "Publish failed");
@@ -74,6 +104,48 @@ export default function DraftReceipt({ address }: { address: string }) {
       setError(e instanceof Error ? e.message : "Publish failed");
     } finally {
       setPublishing(false);
+    }
+  };
+
+  const ensureWallet = async (): Promise<string | null> => {
+    if (walletAddress) return walletAddress;
+    const ethereum = (window as any).ethereum as
+      | undefined
+      | {
+          request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+        };
+
+    if (!ethereum) {
+      setWalletStatus("No wallet detected. Install MetaMask or use a WalletConnect-enabled browser.");
+      return null;
+    }
+
+    setWalletStatus("Connecting wallet…");
+    const accounts = (await ethereum.request({ method: "eth_requestAccounts" })) as string[];
+    const selected = accounts?.[0]?.toLowerCase() ?? null;
+    setWalletAddress(selected);
+    setWalletStatus(selected ? `Connected: ${selected}` : "Wallet connection failed");
+    return selected;
+  };
+
+  const personalSign = async (message: string, address: string): Promise<`0x${string}`> => {
+    const ethereum = (window as any).ethereum as { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> };
+
+    setWalletStatus("Awaiting signature…");
+    try {
+      const sig = (await ethereum.request({
+        method: "personal_sign",
+        params: [message, address],
+      })) as string;
+      setWalletStatus("Signed");
+      return sig as `0x${string}`;
+    } catch {
+      const sig = (await ethereum.request({
+        method: "personal_sign",
+        params: [address, message],
+      })) as string;
+      setWalletStatus("Signed");
+      return sig as `0x${string}`;
     }
   };
 
@@ -148,7 +220,7 @@ export default function DraftReceipt({ address }: { address: string }) {
         <section className="rounded-3xl border border-zinc-800 bg-zinc-900/40 p-6">
           <h2 className="text-lg font-semibold text-white">Publish</h2>
           <p className="mt-2 text-sm text-zinc-400">
-            Publishing pins the snapshot to IPFS (if configured) and stores an immutable version in Supabase.
+            Publishing requires a wallet signature (claimed or unclaimed) and stores an immutable version in Supabase.
           </p>
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
             <button
@@ -158,12 +230,20 @@ export default function DraftReceipt({ address }: { address: string }) {
             >
               {publishing ? "Publishing…" : `Publish v${data.snapshot.version}`}
             </button>
+            <button
+              type="button"
+              onClick={() => ensureWallet().catch(() => undefined)}
+              className="rounded-2xl border border-zinc-700 px-5 py-3 text-sm font-semibold text-zinc-200 hover:border-zinc-500"
+            >
+              {walletAddress ? "Wallet connected" : "Connect wallet"}
+            </button>
             {publishResult?.links?.version ? (
               <a className="text-sm font-semibold text-emerald-300 underline" href={publishResult.links.version}>
                 View published receipt
               </a>
             ) : null}
           </div>
+          {walletStatus ? <p className="mt-3 text-sm text-zinc-300">{walletStatus}</p> : null}
           {publishResult ? (
             <pre className="mt-4 overflow-auto rounded-2xl border border-zinc-800 bg-zinc-950/50 p-4 text-xs text-zinc-200">
               {JSON.stringify(publishResult, null, 2)}
