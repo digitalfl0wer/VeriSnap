@@ -4,6 +4,7 @@ import type { Address } from "@verisnap/core";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import Receipt from "@/app/_components/Receipt";
+import { basescanAddressUrl, blockscoutAddressUrl } from "@/lib/explorers";
 
 type DraftApiResponse =
   | { ok: true; result: any }
@@ -12,22 +13,26 @@ type DraftApiResponse =
 export default function DraftReceipt({ address }: { address: string }) {
   const [data, setData] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState<string | null>(null);
+  const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [publishResult, setPublishResult] = useState<any | null>(null);
   const [email, setEmail] = useState("");
   const [watchStatus, setWatchStatus] = useState<string | null>(null);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [walletStatus, setWalletStatus] = useState<string | null>(null);
-  const [builderLinks, setBuilderLinks] = useState<Array<{ label: string; url: string }>>(DEFAULT_BUILDER_LINKS);
 
   const contractAddress = useMemo(() => (address.trim() as Address), [address]);
   const validAddress = /^0x[0-9a-fA-F]{40}$/.test(contractAddress);
 
-  const loadDraft = useCallback((links: Array<{ label: string; url: string }>) => {
+  const loadDraft = useCallback(() => {
     if (!validAddress) return () => undefined;
     setError(null);
     setData(null);
     setPublishResult(null);
+    setLoading(true);
+    setLoadingStatus("Reading on-chain data…");
 
     const controller = new AbortController();
     fetch("/api/draft", {
@@ -35,7 +40,7 @@ export default function DraftReceipt({ address }: { address: string }) {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         contractAddress,
-        builderLinks: links.filter((l) => l.url.trim()).slice(0, 3),
+        builderLinks: [],
       }),
       signal: controller.signal,
     })
@@ -43,18 +48,22 @@ export default function DraftReceipt({ address }: { address: string }) {
       .then((json: DraftApiResponse) => {
         if (!json.ok) throw new Error(json.error);
         setData(json.result);
+        setLoadingStatus("Draft ready");
       })
       .catch((e) => {
         if (e?.name === "AbortError") return;
         setError(e instanceof Error ? e.message : "Failed to generate draft");
+      })
+      .finally(() => {
+        setLoading(false);
+        setTimeout(() => setLoadingStatus(null), 1200);
       });
 
     return () => controller.abort();
   }, [contractAddress, validAddress]);
 
   useEffect(() => {
-    setBuilderLinks(DEFAULT_BUILDER_LINKS);
-    return loadDraft(DEFAULT_BUILDER_LINKS);
+    return loadDraft();
   }, [contractAddress, loadDraft]);
 
   const onPublish = async () => {
@@ -166,11 +175,27 @@ export default function DraftReceipt({ address }: { address: string }) {
     }
   };
 
+  const onCopy = async (value: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopyStatus(`${label} copied`);
+      setTimeout(() => setCopyStatus(null), 1500);
+    } catch {
+      setCopyStatus("Copy failed");
+      setTimeout(() => setCopyStatus(null), 1500);
+    }
+  };
+
   if (!validAddress) {
     return (
       <main className="space-y-3">
         <h1 className="text-xl font-semibold text-white">Draft</h1>
         <p className="text-zinc-400">Missing or invalid address. Go back and paste a valid 0x… address.</p>
+        <p className="text-sm text-zinc-400">
+          <a className="underline" href="/">
+            Back to home
+          </a>
+        </p>
       </main>
     );
   }
@@ -180,47 +205,80 @@ export default function DraftReceipt({ address }: { address: string }) {
       <header className="space-y-2">
         <p className="text-xs uppercase tracking-[0.5em] text-zinc-500">Draft</p>
         <h1 className="text-2xl font-semibold text-white">LaunchReceipt draft</h1>
-        <p className="text-sm text-zinc-400">{contractAddress}</p>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="break-all font-mono text-xs text-zinc-300">{contractAddress}</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => onCopy(contractAddress, "Address")}
+              className="rounded-full border border-zinc-700 px-3 py-1 text-xs font-semibold text-zinc-200 hover:border-zinc-500"
+            >
+              Copy
+            </button>
+            <a
+              className="rounded-full border border-zinc-700 px-3 py-1 text-xs font-semibold text-zinc-200 hover:border-zinc-500"
+              href={basescanAddressUrl(contractAddress)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              BaseScan
+            </a>
+            <a
+              className="rounded-full border border-zinc-700 px-3 py-1 text-xs font-semibold text-zinc-200 hover:border-zinc-500"
+              href={blockscoutAddressUrl(contractAddress)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Blockscout
+            </a>
+          </div>
+        </div>
+        <StepRow
+          steps={[
+            { label: "Generate", status: data ? "done" : error ? "error" : "active" },
+            { label: "Review", status: data ? "active" : "pending" },
+            { label: "Publish", status: publishResult ? "done" : data ? "pending" : "pending" },
+            { label: "Watch", status: publishResult ? "active" : "pending" },
+          ]}
+        />
       </header>
 
+      {copyStatus ? <p className="text-xs text-zinc-400">{copyStatus}</p> : null}
       {error ? <p className="rounded-2xl border border-rose-900 bg-rose-950/40 p-4 text-rose-200">{error}</p> : null}
-      {!data ? <p className="text-zinc-400">Generating…</p> : <Receipt project={data.project} snapshot={data.snapshot} />}
-
-      {data ? (
+      {!data ? (
         <section className="rounded-3xl border border-zinc-800 bg-zinc-900/20 p-6">
-          <h2 className="text-lg font-semibold text-white">Builder links (optional)</h2>
-          <p className="mt-2 text-sm text-zinc-400">Up to 3 links are shown on the receipt.</p>
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            {builderLinks.map((link, idx) => (
-              <label key={idx} className="space-y-1">
-                <span className="text-xs uppercase tracking-[0.3em] text-zinc-500">{link.label}</span>
-                <input
-                  value={link.url}
-                  onChange={(e) =>
-                    setBuilderLinks((prev) => prev.map((p, i) => (i === idx ? { ...p, url: e.target.value } : p)))
-                  }
-                  placeholder="https://…"
-                  className="w-full rounded-2xl border border-zinc-800 bg-zinc-950/50 px-4 py-3 text-sm text-zinc-200 outline-none focus:border-emerald-400"
-                />
-              </label>
-            ))}
-          </div>
-          <div className="mt-4">
-            <button
-              onClick={() => loadDraft(builderLinks)}
-              className="rounded-2xl border border-zinc-700 px-5 py-3 text-sm font-semibold text-zinc-200 hover:border-zinc-500"
+          <p className="text-sm text-zinc-300">{loadingStatus ?? (loading ? "Generating draft…" : "Waiting…")}</p>
+          <ul className="mt-3 space-y-1 text-sm text-zinc-400">
+            <li className={loading ? "animate-pulse" : ""}>Reading ERC-20 basics (name/symbol/decimals/supply)</li>
+            <li className={loading ? "animate-pulse" : ""}>Checking proxy/admin evidence</li>
+            <li className={loading ? "animate-pulse" : ""}>Checking explorer/source verification</li>
+          </ul>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <a
+              className="rounded-2xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 hover:border-zinc-500"
+              href="/"
             >
-              Update draft
+              Back
+            </a>
+            <button
+              type="button"
+              onClick={() => loadDraft()}
+              disabled={loading}
+              className="rounded-2xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Retry
             </button>
           </div>
         </section>
-      ) : null}
+      ) : (
+        <Receipt project={data.project} snapshot={data.snapshot} />
+      )}
 
       {data ? (
         <section className="rounded-3xl border border-zinc-800 bg-zinc-900/40 p-6">
           <h2 className="text-lg font-semibold text-white">Publish</h2>
           <p className="mt-2 text-sm text-zinc-400">
-            Publishing requires a wallet signature (claimed or unclaimed) and stores an immutable version in Supabase.
+            Publishing requires a wallet signature and creates a permanent, versioned receipt.
           </p>
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
             <button
@@ -245,19 +303,24 @@ export default function DraftReceipt({ address }: { address: string }) {
           </div>
           {walletStatus ? <p className="mt-3 text-sm text-zinc-300">{walletStatus}</p> : null}
           {publishResult ? (
-            <pre className="mt-4 overflow-auto rounded-2xl border border-zinc-800 bg-zinc-950/50 p-4 text-xs text-zinc-200">
-              {JSON.stringify(publishResult, null, 2)}
-            </pre>
+            <details className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-950/30 p-4">
+              <summary className="cursor-pointer text-sm font-semibold text-zinc-200">Technical details</summary>
+              <pre className="mt-3 overflow-auto rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4 text-xs text-zinc-200">
+                {JSON.stringify(publishResult, null, 2)}
+              </pre>
+            </details>
           ) : null}
         </section>
       ) : null}
 
-      {data ? (
-        <section className="rounded-3xl border border-zinc-800 bg-zinc-900/20 p-6">
-          <h2 className="text-lg font-semibold text-white">Watch Mode</h2>
-          <p className="mt-2 text-sm text-zinc-400">Subscribe to receive email when trust-relevant fields change.</p>
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
-            <label className="flex-1 space-y-1">
+	      {data ? (
+	        <section className="rounded-3xl border border-zinc-800 bg-zinc-900/20 p-6">
+	          <h2 className="text-lg font-semibold text-white">Watch Mode</h2>
+	          <p className="mt-2 text-sm text-zinc-400">
+	            Subscribe to receive an email if important fields change. You’ll confirm via double opt-in before any alerts.
+	          </p>
+	          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+	            <label className="flex-1 space-y-1">
               <span className="text-xs uppercase tracking-[0.3em] text-zinc-500">Email</span>
               <input
                 value={email}
@@ -277,11 +340,33 @@ export default function DraftReceipt({ address }: { address: string }) {
         </section>
       ) : null}
     </main>
-  );
+	);
 }
 
-const DEFAULT_BUILDER_LINKS: Array<{ label: string; url: string }> = [
-  { label: "Website", url: "" },
-  { label: "Docs", url: "" },
-  { label: "Social", url: "" },
-];
+function StepRow({
+  steps,
+}: {
+  steps: Array<{ label: string; status: "pending" | "active" | "done" | "error" }>;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2 pt-1">
+      {steps.map((step) => (
+        <span
+          key={step.label}
+          className={[
+            "rounded-full border px-3 py-1 text-xs font-semibold",
+            step.status === "done" ? "border-emerald-400/60 text-emerald-200" : "",
+            step.status === "active" ? "border-sky-400/60 text-sky-200" : "",
+            step.status === "pending" ? "border-zinc-800 text-zinc-400" : "",
+            step.status === "error" ? "border-rose-700 text-rose-200" : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
+          {step.status === "done" ? "✅ " : step.status === "error" ? "⚠️ " : ""}
+          {step.label}
+        </span>
+      ))}
+    </div>
+  );
+}

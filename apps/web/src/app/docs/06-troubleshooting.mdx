@@ -1,0 +1,56 @@
+# Troubleshooting
+
+## “Draft failed” or “RPC error”
+
+This usually means:
+
+- your RPC endpoint is down or rate-limited
+- the tx hash is not on the selected network (Sepolia vs mainnet)
+- the contract/address is invalid
+
+Fixes:
+
+- confirm you’re using the right chain (Base Sepolia vs Base mainnet)
+- retry in a minute (RPC hiccups happen)
+- try the tx hash instead of address (more reliable)
+
+## “Verification failed”
+
+Possible causes:
+
+- RPC read mismatch (temporary)
+- contract is a proxy and needs deeper resolution
+- explorer enrichment unavailable
+
+Fixes:
+
+- refresh and retry
+- check the explorer link (Blockscout/BaseScan) to confirm the tx details
+- if it’s a proxy, ensure proxy detection/enrichment is enabled
+
+## “I claimed but it still shows unclaimed”
+
+Possible causes:
+
+- wallet signature not completed
+- claim token expired
+- you switched wallets
+
+Fixes:
+
+- re-claim using the same wallet used to publish
+- then publish again (or re-run publish step if supported)
+
+## “I’m not receiving watch emails”
+
+Possible causes:
+
+- email provider not configured
+- message landed in spam
+- watcher not saved or cron not running
+
+Fixes:
+
+- check spam/promotions tab
+- verify Watch Mode shows you as subscribed
+- confirm cron is active (if self-hosted)

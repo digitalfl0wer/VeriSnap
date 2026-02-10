@@ -1,0 +1,30 @@
+# Create a Receipt (Draft)
+
+## Option A: Use a Tx Hash (recommended)
+
+1) Copy the Base tx hash from your deploy/launch transaction
+2) Paste it into the **Tx Hash** form
+3) Click **Generate Draft**
+
+Why this is best:
+
+- A tx receipt is a strong on-chain anchor (logs + metadata)
+- Fewer ambiguous guesses than a bare contract address
+
+## Option B: Use a Contract Address
+
+1) Paste the contract address into the **Address** form
+2) Click **Generate Draft**
+
+Use this when:
+
+- you don’t have the tx hash handy
+- you want to snapshot a contract state post-launch
+
+## What you’ll see in the draft
+
+- **Canonical JSON**: normalized, consistent structure
+- **Canonical Hash**: the fingerprint of that JSON
+- **RPC verification**: confirmation that the data matches Base RPC reads
+
+If anything fails, jump to `Troubleshooting`.

@@ -1,0 +1,29 @@
+# Watch Mode (Alerts)
+
+Watch Mode monitors a project and alerts you when VeriSnap detects changes.
+
+## What it’s good for
+
+- launch integrity monitoring
+- catching upgrades/proxy changes
+- detecting metadata/supply/ownership movement (depending on what your receipt includes)
+
+## How to subscribe
+
+1) Go to a project page (`/p/[slug]`)
+2) Click **Watch**
+3) Enter your email
+4) Confirm subscription (if required by your flow)
+
+## How it works
+
+- A cron job polls the project
+- VeriSnap generates a fresh canonical snapshot
+- If the snapshot hash differs, a diff is recorded
+- If you’re subscribed, you get an alert email
+
+## What you’ll receive
+
+- the project link
+- what changed (diff summary)
+- timestamp of the run

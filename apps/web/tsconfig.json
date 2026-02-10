@@ -2,6 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "incremental": true,
+    "tsBuildInfoFile": "/tmp/verisnap-web.tsbuildinfo",
     "plugins": [
       {
         "name": "next"

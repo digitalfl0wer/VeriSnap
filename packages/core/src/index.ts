@@ -6,6 +6,8 @@ const TIMESTAMP_KEYS = new Set(["observedAt", "blockTimestamp"]);
 
 export type Address = `0x${string}`;
 
+export { keccak_256 };
+
 export type TruthStatus = "yes" | "no" | "unknown" | "conflict";
 
 export type Provenance = "chain" | "basescan" | "sourcify" | "builder" | "derived";

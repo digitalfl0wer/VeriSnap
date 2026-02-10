@@ -3,6 +3,8 @@
 import type { LaunchSnapshot } from "@verisnap/core";
 import { useMemo, useState } from "react";
 
+import { basescanAddressUrl, blockscoutAddressUrl } from "@/lib/explorers";
+
 type Props = {
   project: { slug: string; name: string };
   snapshot: {
@@ -36,14 +38,6 @@ export default function Receipt({ project, snapshot }: Props) {
   const [verifyResult, setVerifyResult] = useState<any | null>(null);
 
   const canonical = snapshot.canonical_json as LaunchSnapshot;
-  const builderLinks = Array.isArray(snapshot.metadata?.builderLinks)
-    ? (snapshot.metadata?.builderLinks as Array<{ label?: unknown; url?: unknown }>)
-        .map((item) => ({
-          label: typeof item.label === "string" ? item.label : "Link",
-          url: typeof item.url === "string" ? item.url : "",
-        }))
-        .filter((link) => link.url)
-    : [];
 
   const lineItems = useMemo(() => {
     const token = canonical.token ?? {};
@@ -101,6 +95,19 @@ export default function Receipt({ project, snapshot }: Props) {
     }
   };
 
+  const onShare = async () => {
+    const url = window.location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: `${project.name} — LaunchReceipt`, url });
+        return;
+      }
+    } catch {
+      // fall through to copy
+    }
+    await onCopy(url, "Link");
+  };
+
   const onVerify = async () => {
     setVerifyResult(null);
     const res = await fetch(`/api/verify?slug=${encodeURIComponent(project.slug)}&version=${snapshot.version}`);
@@ -136,6 +143,12 @@ export default function Receipt({ project, snapshot }: Props) {
             Raw proof view
           </button>
           <button
+            onClick={onShare}
+            className="rounded-full border border-zinc-700 px-3 py-1 text-xs font-semibold text-zinc-200 hover:border-zinc-500 print:hidden"
+          >
+            Share
+          </button>
+          <button
             onClick={() => window.print()}
             className="rounded-full border border-zinc-700 px-3 py-1 text-xs font-semibold text-zinc-200 hover:border-zinc-500 print:hidden"
           >
@@ -147,6 +160,7 @@ export default function Receipt({ project, snapshot }: Props) {
       <div className="mt-6 grid gap-4 md:grid-cols-2">
         {lineItems.map((item) => {
           const meta = getStatusMeta(item.status);
+          const context = getLineItemContext(item.id, canonical);
           return (
             <article
               key={item.id}
@@ -155,6 +169,8 @@ export default function Receipt({ project, snapshot }: Props) {
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">{item.label}</p>
                 <p className="mt-1 text-lg font-semibold text-white print:text-black">{item.value}</p>
+                {context.primary ? <p className="mt-1 text-xs text-zinc-400 print:text-zinc-600">{context.primary}</p> : null}
+                {context.secondary ? <p className="mt-1 text-xs text-zinc-500 print:text-zinc-600">{context.secondary}</p> : null}
               </div>
               <div className="flex items-center justify-between gap-3 text-xs">
                 <p className="text-zinc-400 print:text-zinc-600">{item.detail}</p>
@@ -166,6 +182,35 @@ export default function Receipt({ project, snapshot }: Props) {
             </article>
           );
         })}
+      </div>
+
+      <div className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-5 print:border-zinc-300 print:bg-white">
+        <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">Contract address</p>
+        <p className="mt-2 break-all font-mono text-xs text-zinc-200 print:text-black">{canonical.contractAddress}</p>
+        <div className="mt-3 flex flex-wrap gap-2 print:hidden">
+          <button
+            onClick={() => onCopy(canonical.contractAddress, "Address")}
+            className="rounded-full border border-zinc-700 px-3 py-1 text-xs font-semibold text-zinc-200 hover:border-zinc-500"
+          >
+            Copy address
+          </button>
+          <a
+            className="rounded-full border border-zinc-700 px-3 py-1 text-xs font-semibold text-zinc-200 hover:border-zinc-500"
+            href={basescanAddressUrl(canonical.contractAddress)}
+            target="_blank"
+            rel="noreferrer"
+          >
+            BaseScan
+          </a>
+          <a
+            className="rounded-full border border-zinc-700 px-3 py-1 text-xs font-semibold text-zinc-200 hover:border-zinc-500"
+            href={blockscoutAddressUrl(canonical.contractAddress)}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Blockscout
+          </a>
+        </div>
       </div>
 
       <div className="mt-6 grid gap-4 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-5 print:border-zinc-300 print:bg-white">
@@ -227,9 +272,16 @@ export default function Receipt({ project, snapshot }: Props) {
 
         {copyStatus ? <p className="text-xs text-zinc-400 print:hidden">{copyStatus}</p> : null}
         {verifyResult ? (
-          <pre className="overflow-auto rounded-2xl border border-zinc-800 bg-zinc-950/50 p-4 text-xs text-zinc-200 print:hidden">
-            {JSON.stringify(verifyResult, null, 2)}
-          </pre>
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-950/50 p-4 print:hidden">
+            <p className="text-sm font-semibold text-white">{formatVerifyHeadline(verifyResult)}</p>
+            <p className="mt-1 text-xs text-zinc-400">{formatVerifyDetail(verifyResult)}</p>
+            <details className="mt-3">
+              <summary className="cursor-pointer text-xs font-semibold text-zinc-200">Raw verify result</summary>
+              <pre className="mt-3 overflow-auto rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4 text-xs text-zinc-200">
+                {JSON.stringify(verifyResult, null, 2)}
+              </pre>
+            </details>
+          </div>
         ) : null}
       </div>
 
@@ -255,22 +307,6 @@ export default function Receipt({ project, snapshot }: Props) {
                 <li>Total supply: {canonical.token?.totalSupply?.value ? "✅ present" : "❔ missing"}</li>
               </ul>
             </div>
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4 print:border-zinc-300 print:bg-white">
-              <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">Builder links</p>
-              {builderLinks.length ? (
-                <ul className="mt-3 space-y-1">
-                  {builderLinks.map((link) => (
-                    <li key={link.url}>
-                      <a className="text-emerald-200 underline" href={link.url} target="_blank" rel="noreferrer">
-                        {link.label}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="mt-3 text-sm text-zinc-400 print:text-zinc-600">No links provided.</p>
-              )}
-            </div>
           </div>
           <ul className="mt-3 list-disc space-y-1 pl-5">
             <li>Hash proves integrity of the canonical snapshot JSON.</li>
@@ -295,4 +331,75 @@ function getStatusMeta(status: unknown): StatusMeta {
     return statusMeta[status]!;
   }
   return statusMeta.unknown!;
+}
+
+function formatVerifyHeadline(result: any) {
+  if (!result || typeof result !== "object") return "Verification result unavailable";
+  if (result.ok === false) return "Verification failed";
+  const status = result.result?.status as unknown;
+  if (status === "valid") return "✅ Verified";
+  if (status === "invalid") return "❌ Verification failed";
+  if (status === "error") return "⚠️ Could not verify";
+  return "Verification result";
+}
+
+function formatVerifyDetail(result: any) {
+  if (!result || typeof result !== "object") return "";
+  if (result.ok === false) return String(result.error ?? "Unknown error");
+  const message = result.result?.evidence?.message as unknown;
+  return typeof message === "string" ? message : "";
+}
+
+function getLineItemContext(id: string, canonical: LaunchSnapshot) {
+  if (id === "proxy") {
+    const status = canonical.proxy?.isProxy?.status;
+    const provenance = canonical.proxy?.isProxy?.provenance;
+    const secondary =
+      status === "unknown"
+        ? `Why unknown: we couldn't confirm whether this token uses a proxy (${provenance ?? "unknown source"}).`
+        : "If upgradeable, the code behind this token can change without changing the address.";
+    return { primary: "Checks if this token can be upgraded.", secondary };
+  }
+
+  if (id === "admin") {
+    const status = canonical.proxy?.admin?.status;
+    const provenance = canonical.proxy?.admin?.provenance;
+    const secondary =
+      status === "unknown"
+        ? `Why unknown: we couldn't detect an admin address (${provenance ?? "unknown source"}).`
+        : "Admin/owner addresses can often upgrade or change critical behavior.";
+    return { primary: "Looks for an admin address that may control upgrades.", secondary };
+  }
+
+  if (id === "verify") {
+    const status = canonical.verification?.isVerified?.status;
+    const provenance = canonical.verification?.isVerified?.provenance;
+    const secondary =
+      status === "unknown"
+        ? `Why unknown: explorer/source verification data wasn't available (${provenance ?? "unknown source"}).`
+        : "Verified source/ABI makes it easier to audit and detect admin powers.";
+    return { primary: "Checks whether the contract is verified on an explorer.", secondary };
+  }
+
+  if (id === "supply") {
+    const status = canonical.token?.totalSupply?.status;
+    const provenance = canonical.token?.totalSupply?.provenance;
+    const secondary =
+      status === "unknown"
+        ? `Why unknown: we couldn't read total supply (${provenance ?? "unknown source"}).`
+        : "Supply is a core disclosure; changes can indicate minting or unusual behavior.";
+    return { primary: "Reads the token’s reported total supply.", secondary };
+  }
+
+  if (id === "token") {
+    const status = canonical.token?.name?.status ?? canonical.token?.symbol?.status;
+    const provenance = canonical.token?.name?.provenance ?? canonical.token?.symbol?.provenance;
+    const secondary =
+      status === "unknown"
+        ? `Why unknown: we couldn't read name/symbol (${provenance ?? "unknown source"}).`
+        : "Name/symbol help users confirm they’re looking at the intended token.";
+    return { primary: "Reads human-friendly token identifiers.", secondary };
+  }
+
+  return { primary: null as string | null, secondary: null as string | null };
 }

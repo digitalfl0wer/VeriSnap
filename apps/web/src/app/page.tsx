@@ -1,5 +1,6 @@
 import AddressForm from "./_components/AddressForm";
 import TxHashForm from "./_components/TxHashForm";
+import Link from "next/link";
 
 export default function HomePage() {
   return (
@@ -11,36 +12,42 @@ export default function HomePage() {
           Public, shareable, versioned receipts for ERC-20 launches on Base. Generate a draft from a
           contract address, publish an immutable version, then verify + diff changes over time.
         </p>
+        <div className="flex flex-wrap gap-2 pt-2">
+          {["1) Generate", "2) Review", "3) Publish", "4) Watch"].map((s) => (
+            <span key={s} className="rounded-full border border-zinc-800 bg-zinc-950/30 px-3 py-1 text-xs font-semibold text-zinc-300">
+              {s}
+            </span>
+          ))}
+          <Link
+            href="/docs/quickstart"
+            scroll={false}
+            className="rounded-full border border-emerald-700/60 bg-emerald-950/30 px-3 py-1 text-xs font-semibold text-emerald-100 hover:border-emerald-500"
+          >
+            Docs
+          </Link>
+        </div>
       </header>
 
-      <section className="rounded-3xl border border-zinc-800 bg-zinc-900/40 p-6">
+      <section className="space-y-2">
         <h2 className="text-lg font-semibold text-white">Generate draft</h2>
         <p className="mt-2 text-sm text-zinc-400">
-          Paste a contract address to generate a draft receipt (on-chain reads + BaseScan/Sourcify evidence).
+          Paste a token contract address to generate a draft receipt. We read on-chain data and check explorer/source verification when available.
         </p>
-        <div className="mt-5">
+        <div className="surface surface-hover p-6">
           <AddressForm />
         </div>
       </section>
 
-      <section className="rounded-3xl border border-zinc-800 bg-zinc-900/30 p-6">
-        <h2 className="text-lg font-semibold text-white">Receipt from tx hash</h2>
+      <section className="space-y-2">
+        <h2 className="text-lg font-semibold text-white">Quick receipt from a tx hash</h2>
         <p className="mt-2 text-sm text-zinc-400">
-          Free-plan path: RPC-first verification via <code>eth_getTransactionReceipt</code>.
+          Useful when you only have a transaction hash. This view uses public RPC data.
         </p>
-        <div className="mt-5">
+        <div className="surface surface-hover p-6">
           <TxHashForm />
         </div>
       </section>
 
-      <section className="rounded-3xl border border-zinc-800 bg-zinc-900/20 p-6 text-sm text-zinc-300">
-        <h2 className="text-lg font-semibold text-white">Notes</h2>
-        <ul className="mt-3 list-disc space-y-1 pl-5">
-          <li>Watch Mode is required for published projects (double opt-in).</li>
-          <li>No safety verdicts — receipts are deterministic snapshots + evidence.</li>
-          <li>Configure env vars in `docs/env.md`.</li>
-        </ul>
-      </section>
     </main>
   );
 }

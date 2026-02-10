@@ -1,0 +1,40 @@
+# How to Read a Receipt Page
+
+Receipt pages exist to answer two questions:
+
+1) What exactly was captured?
+2) Can I verify it against on-chain truth?
+
+## Sections you’ll see
+
+### Canonical JSON
+
+The normalized snapshot. It should be consistent across runs unless something changed.
+
+### Canonical Hash
+
+A fingerprint of the canonical JSON.
+If the JSON changes, the hash changes.
+
+### Verification
+
+VeriSnap verifies by reading from Base RPC and confirming the snapshot matches expected on-chain data.
+
+### Diff History
+
+If multiple snapshots exist, VeriSnap shows what changed over time.
+This is the “audit trail.”
+
+### Explorer links (Blockscout/BaseScan)
+
+Used to independently check:
+
+- the transaction
+- contract address
+- related events/logs
+
+## Common interpretation patterns
+
+- “Hash is the same across days” → your snapshot is stable
+- “Diff shows metadata change” → something about the contract or references changed
+- “Unverified” → RPC trouble or missing/unsupported source data

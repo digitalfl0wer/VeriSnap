@@ -1,4 +1,4 @@
-import { keccak_256 } from "@noble/hashes/sha3.js";
+import { keccak_256 } from "@verisnap/core";
 
 const TEXT_ENCODER = new TextEncoder();
 
@@ -85,4 +85,3 @@ function bytesToHex(bytes: Uint8Array): string {
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 }
-

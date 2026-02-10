@@ -1,0 +1,30 @@
+# Claim your publisher
+
+Publishing is gated by a wallet signature so that published receipts can be tied to a specific publisher identity (typically the party controlling the wallet used in the claim flow).
+
+## How the claim flow works (high level)
+
+- The server creates a short-lived claim token and a human-readable message
+- Your wallet signs the message using `personal_sign`
+- The signature is sent back to the server with the token
+- If verification succeeds, the publish is accepted
+
+This is designed to prevent anonymous edits to published receipts.
+
+## What you sign
+
+The message is intentionally readable. Before you sign:
+
+- Confirm the project slug matches what you expect
+- Confirm the version being published matches the draft you reviewed
+- Never sign messages you don’t understand
+
+## Common reasons a claim fails
+
+- Wallet not connected or wrong account selected
+- User rejected the signature request
+- Signature format mismatch (some wallets swap param order; the app retries)
+- Claim token expired (refresh and try again)
+
+Next: [Publish and share](/docs/publish-and-share).
+
